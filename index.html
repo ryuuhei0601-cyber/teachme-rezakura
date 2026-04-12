@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TeachMe レザクラ - マニュアル管理</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif; background: #f0f2f5; color: #1a1a2e; min-height: 100vh; }
+
+    /* ====== LAYOUT ====== */
+    .app { display: flex; min-height: 100vh; }
+    .sidebar { width: 240px; background: #1a1a2e; color: #fff; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+    .main { margin-left: 240px; flex: 1; }
+    .topbar { background: #fff; border-bottom: 1px solid #e8ecf0; padding: 0 32px; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+    .content { padding: 32px; }
+
+    /* ====== SIDEBAR ====== */
+    .sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .sidebar-logo h1 { font-size: 20px; font-weight: 700; color: #4f9cf9; letter-spacing: 0.5px; }
+    .sidebar-logo span { font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 1px; text-transform: uppercase; }
+    .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+    .nav-section-label { font-size: 10px; color: rgba(255,255,255,0.35); padding: 12px 20px 4px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; border-radius: 0; transition: all 0.15s; font-size: 14px; color: rgba(255,255,255,0.7); border-left: 3px solid transparent; }
+    .nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+    .nav-item.active { background: rgba(79,156,249,0.15); color: #4f9cf9; border-left-color: #4f9cf9; }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+    .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #4f9cf9; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
+    .user-info { display: flex; align-items: center; gap: 10px; }
+    .user-info span { font-size: 13px; color: rgba(255,255,255,0.7); }
+
+    /* ====== TOPBAR ====== */
+    .topbar-title { font-size: 18px; font-weight: 600; color: #1a1a2e; }
+    .topbar-actions { display: flex; align-items: center; gap: 12px; }
+    .search-box { display: flex; align-items: center; gap: 8px; background: #f0f2f5; border-radius: 8px; padding: 8px 14px; border: 1.5px solid transparent; transition: border-color 0.15s; }
+    .search-box:focus-within { border-color: #4f9cf9; background: #fff; }
+    .search-box input { border: none; background: none; outline: none; font-size: 14px; color: #1a1a2e; width: 220px; }
+    .search-box svg { width: 16px; height: 16px; color: #9ca3af; }
+
+    /* ====== BUTTONS ====== */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+    .btn-primary { background: #4f9cf9; color: #fff; }
+    .btn-primary:hover { background: #3a8ef0; }
+    .btn-secondary { background: #fff; color: #374151; border: 1.5px solid #e5e7eb; }
+    .btn-secondary:hover { background: #f9fafb; border-color: #d1d5db; }
+    .btn-danger { background: #fee2e2; color: #dc2626; }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+    .btn-icon { padding: 8px; border-radius: 8px; background: transparent; border: none; cursor: pointer; color: #6b7280; transition: all 0.15s; display: flex; align-items: center; }
+    .btn-icon:hover { background: #f0f2f5; color: #1a1a2e; }
+
+    /* ====== STATS CARDS ====== */
+    .stats-grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: 16px; margin-bottom: 28px; max-width: 240px; }
+    .stat-card { background: #fff; border-radius: 12px; padding: 20px; border: 1px solid #e8ecf0; }
+    .stat-card .label { font-size: 12px; color: #9ca3af; font-weight: 500; margin-bottom: 6px; }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: #1a1a2e; }
+    .stat-card .sub { font-size: 12px; color: #10b981; margin-top: 4px; }
+    .stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+
+    /* ====== MANUAL CARDS ====== */
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .section-title { font-size: 16px; font-weight: 700; color: #1a1a2e; }
+    .manuals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .manual-card { background: #fff; border-radius: 12px; border: 1.5px solid #e8ecf0; cursor: pointer; transition: all 0.2s; overflow: hidden; }
+    .manual-card:hover { border-color: #4f9cf9; box-shadow: 0 4px 16px rgba(79,156,249,0.12); transform: translateY(-1px); }
+    .card-thumb { height: 120px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+    .card-body { padding: 16px; }
+    .card-title { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; line-height: 1.4; }
+    .card-desc { font-size: 12px; color: #6b7280; line-height: 1.5; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-meta { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid #f0f2f5; }
+    .card-steps { font-size: 12px; color: #9ca3af; display: flex; align-items: center; gap: 4px; }
+    .card-date { font-size: 11px; color: #c4c9d4; }
+
+    /* ====== MANUAL VIEWER ====== */
+    .viewer-container { max-width: 800px; margin: 0 auto; }
+    .viewer-header { background: #fff; border-radius: 12px; padding: 28px; border: 1px solid #e8ecf0; margin-bottom: 20px; }
+    .viewer-title { font-size: 26px; font-weight: 800; color: #1a1a2e; margin-bottom: 10px; }
+    .viewer-desc { font-size: 15px; color: #6b7280; line-height: 1.7; margin-bottom: 18px; }
+    .viewer-meta { display: flex; gap: 20px; }
+    .viewer-meta-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #9ca3af; }
+    .steps-list { display: flex; flex-direction: column; gap: 12px; }
+    .step-item { background: #fff; border-radius: 12px; border: 1.5px solid #e8ecf0; overflow: hidden; transition: border-color 0.15s; }
+    .step-header { display: flex; align-items: center; gap: 14px; padding: 16px 20px; cursor: pointer; }
+    .step-number { width: 36px; height: 36px; border-radius: 50%; background: #f0f2f5; color: #6b7280; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+    .step-info { flex: 1; }
+    .step-title { font-size: 15px; font-weight: 700; color: #1a1a2e; }
+    .step-preview { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+    .step-body { padding: 0 20px 20px 70px; }
+    .step-desc { font-size: 14px; color: #374151; line-height: 1.7; }
+    .step-image { width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; margin-top: 12px; background: #f9fafb; }
+    .img-upload-area { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 24px; border: 2px dashed #d1d5db; border-radius: 8px; cursor: pointer; transition: all 0.15s; color: #9ca3af; font-size: 13px; margin-top: 8px; }
+    .img-upload-area:hover { border-color: #4f9cf9; color: #4f9cf9; background: #f0f7ff; }
+    .img-upload-area svg { width: 28px; height: 28px; }
+    .img-preview-wrap { position: relative; margin-top: 8px; display: inline-block; width: 100%; }
+    .img-preview-wrap img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; display: block; }
+    .img-remove-btn { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.55); color: #fff; border: none; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .img-remove-btn:hover { background: rgba(220,38,38,0.85); }
+
+    /* ====== EDITOR ====== */
+    .editor-container { max-width: 760px; margin: 0 auto; }
+    .editor-card { background: #fff; border-radius: 12px; border: 1px solid #e8ecf0; padding: 28px; margin-bottom: 16px; }
+    .editor-card h3 { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f0f2f5; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .form-input, .form-textarea, .form-select { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: #1a1a2e; outline: none; transition: border-color 0.15s; font-family: inherit; background: #fff; }
+    .form-input:focus, .form-textarea:focus, .form-select:focus { border-color: #4f9cf9; }
+    .form-textarea { resize: vertical; min-height: 80px; }
+    .step-editor { background: #f9fafb; border-radius: 10px; border: 1.5px solid #e5e7eb; padding: 16px; margin-bottom: 12px; }
+    .step-editor-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .step-editor-num { font-size: 13px; font-weight: 700; color: #4f9cf9; background: #eff6ff; padding: 4px 10px; border-radius: 6px; }
+    .add-step-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; border: 2px dashed #d1d5db; border-radius: 10px; background: none; cursor: pointer; font-size: 14px; color: #6b7280; font-weight: 600; transition: all 0.15s; }
+    .add-step-btn:hover { border-color: #4f9cf9; color: #4f9cf9; background: #f0f7ff; }
+
+
+    /* ====== EMPTY STATE ====== */
+    .empty-state { text-align: center; padding: 60px 20px; }
+    .empty-state svg { width: 64px; height: 64px; color: #d1d5db; margin: 0 auto 16px; }
+    .empty-state h3 { font-size: 18px; font-weight: 700; color: #6b7280; margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; color: #9ca3af; }
+
+    /* ====== MODAL ====== */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: flex; align-items: center; justify-content: center; }
+    .modal { background: #fff; border-radius: 16px; width: 440px; max-width: 90vw; padding: 28px; }
+    .modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .modal p { font-size: 14px; color: #6b7280; margin-bottom: 24px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* ====== BREADCRUMB ====== */
+    .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #9ca3af; margin-bottom: 20px; }
+    .breadcrumb a { color: #4f9cf9; cursor: pointer; }
+    .breadcrumb a:hover { text-decoration: underline; }
+
+    /* ====== BADGE ====== */
+    .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .badge-blue { background: #eff6ff; color: #3b82f6; }
+    .badge-green { background: #f0fdf4; color: #16a34a; }
+    .badge-purple { background: #f5f3ff; color: #7c3aed; }
+    .badge-orange { background: #fff7ed; color: #ea580c; }
+    .badge-pink { background: #fdf2f8; color: #db2777; }
+
+    /* ====== SCROLLBAR ====== */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+    /* ====== HAMBURGER ====== */
+    .hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 40px; height: 40px; padding: 8px; cursor: pointer; border: none; background: transparent; border-radius: 8px; flex-shrink: 0; }
+    .hamburger span { display: block; width: 22px; height: 2px; background: #374151; border-radius: 2px; transition: all 0.2s; }
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 99; }
+
+    /* ====== MOBILE ====== */
+    @media (max-width: 768px) {
+      .hamburger { display: flex; }
+      .sidebar { left: -240px; transition: left 0.25s ease; }
+      .sidebar.open { left: 0; box-shadow: 4px 0 24px rgba(0,0,0,0.25); }
+      .sidebar-overlay { display: block; }
+      .main { margin-left: 0; }
+      .topbar { padding: 0 12px; gap: 8px; }
+      .topbar-title { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+      .topbar-actions { gap: 6px; }
+      .search-box input { width: 100px; }
+      .btn span.btn-label { display: none; }
+      .content { padding: 16px; }
+      .manuals-grid { grid-template-columns: 1fr; }
+      .stats-grid { max-width: 100%; }
+      .step-body { padding: 0 16px 20px 16px; }
+      .viewer-header { padding: 20px; }
+      .viewer-title { font-size: 20px; }
+      .viewer-meta { flex-wrap: wrap; gap: 10px; }
+      .editor-card { padding: 20px; }
+      .modal { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ==============================
+// INITIAL DATA
+// ==============================
+const INITIAL_MANUALS = [
+  {
+    id: 1,
+    title: "新入社員オンボーディング",
+    description: "新しく入社した社員が最初の1週間でやるべきことをまとめたマニュアルです。",
+    emoji: "🏢",
+    createdAt: "2026-04-01",
+    updatedAt: "2026-04-10",
+    author: "山田 太郎",
+    steps: [
+      { id: 1, title: "入社書類の提出", description: "雇用契約書、マイナンバー、口座情報など必要書類を人事部に提出してください。提出先：2F 人事部 鈴木さん", checked: false },
+      { id: 2, title: "PCのセットアップ", description: "ITサポートから配布されたPCにログインし、メール・Slackのアカウント設定を行います。初回ログイン後はパスワードを必ず変更してください。", checked: false },
+      { id: 3, title: "社内システムへのアクセス確認", description: "勤怠管理システム（HR Cloud）、経費精算（Concur）、プロジェクト管理（Asana）にログインできることを確認します。", checked: false },
+      { id: 4, title: "社内ツアー・ロッカーの確認", description: "総務担当者と一緒に社内を一周し、会議室・トイレ・休憩室の場所を把握します。ロッカーの場所と鍵を受け取ります。", checked: false },
+      { id: 5, title: "チームへの自己紹介", description: "所属チームの朝会で自己紹介を行います。名前・前職・趣味など1分程度で話しましょう。", checked: false }
+    ]
+  },
+  {
+    id: 2,
+    title: "レジ操作マニュアル",
+    description: "POSレジの基本操作から返品処理までの手順を解説します。",
+    emoji: "🛒",
+    createdAt: "2026-03-15",
+    updatedAt: "2026-04-05",
+    author: "田中 花子",
+    steps: [
+      { id: 1, title: "レジの起動とログイン", description: "電源ボタンを押してPOSシステムを起動します。担当者IDとパスワードを入力してログインします。担当者IDは名札の裏面に記載されています。", checked: false },
+      { id: 2, title: "商品バーコードのスキャン", description: "商品のバーコードをスキャナーに向けてスキャンします。読み取れない場合は手入力モードで商品コードを直接入力してください。", checked: false },
+      { id: 3, title: "支払い処理（現金）", description: "金額を確認後、お客様から現金を受け取ります。レジに入力してお釣りを計算・返金します。必ず金額を口頭で確認してください。", checked: false },
+      { id: 4, title: "支払い処理（カード）", description: "カードリーダーに案内し、お客様にカードを挿入・タッチしてもらいます。承認完了後、レシートを印刷して渡します。", checked: false },
+      { id: 5, title: "返品・交換の対応", description: "レシートを確認し、返品期限内であれば返品処理を行います。返品メニューから商品を選択し、管理者承認コードを入力します。", checked: false },
+      { id: 6, title: "レジの締め処理", description: "営業終了後、売上レポートを印刷します。現金を数えてレポートと照合し、差異がある場合は店長に報告してください。", checked: false }
+    ]
+  },
+  {
+    id: 3,
+    title: "月次レポートの作成手順",
+    description: "毎月末に提出が必要な月次業績レポートの作成から提出までの流れです。",
+    emoji: "📊",
+    createdAt: "2026-02-20",
+    updatedAt: "2026-04-08",
+    author: "佐藤 次郎",
+    steps: [
+      { id: 1, title: "データの収集", description: "SalesforceとGA4からそれぞれ当月の売上データとアクセスデータをエクスポートします。ファイル形式はCSVで保存してください。", checked: false },
+      { id: 2, title: "Excelテンプレートへの入力", description: "共有フォルダ内の「月次レポートテンプレート.xlsx」を開き、収集したデータを所定のセルに入力します。グラフは自動更新されます。", checked: false },
+      { id: 3, title: "前月比・目標達成率の確認", description: "自動計算された前月比と目標達成率を確認します。大きな差異がある項目には補足コメントを記入してください。", checked: false },
+      { id: 4, title: "上司のレビュー依頼", description: "Slackの #月次報告 チャンネルでファイルをシェアし、上司にレビューを依頼します。期限は毎月25日です。", checked: false },
+      { id: 5, title: "修正・最終提出", description: "フィードバックを反映後、PDFに変換して経営管理部のメールアドレスに送付します。件名：「【月次レポート】YYYY年MM月 〇〇部」", checked: false }
+    ]
+  },
+  {
+    id: 4,
+    title: "Slack利用ガイド",
+    description: "社内コミュニケーションツール Slackの基本的な使い方と社内ルールをまとめました。",
+    emoji: "💬",
+    createdAt: "2026-01-10",
+    updatedAt: "2026-03-28",
+    author: "鈴木 美咲",
+    steps: [
+      { id: 1, title: "アカウント作成とプロフィール設定", description: "招待メールのリンクからSlackにサインアップします。プロフィール写真・氏名・役職・内線番号を必ず設定してください。", checked: false },
+      { id: 2, title: "チャンネルへの参加", description: "所属部署の公開チャンネルに参加します。#全社向け #お知らせ は全員必須参加です。興味あるプロジェクトチャンネルにも参加できます。", checked: false },
+      { id: 3, title: "メッセージの送り方とマナー", description: "業務連絡はDMより公開チャンネルを優先します。深夜・早朝の通知は /remind を使って翌朝に届くよう設定しましょう。", checked: false },
+      { id: 4, title: "スタンプ・リアクションの活用", description: "了解の意思表示には :white_check_mark: を、確認中は :eyes: を使います。長文返信が不要な場合はリアクションのみでOKです。", checked: false }
+    ]
+  },
+  {
+    id: 5,
+    title: "クレーム対応マニュアル",
+    description: "お客様からのクレームを適切に受け付け、迅速に解決するための対応フロー。",
+    emoji: "🤝",
+    createdAt: "2026-03-01",
+    updatedAt: "2026-04-09",
+    author: "高橋 真由",
+    steps: [
+      { id: 1, title: "お客様のお話を丁寧に聞く", description: "まず謝罪し、お客様の話を最後まで遮らず聞きます。「おっしゃる通りです」「ご不便をおかけして大変申し訳ございません」など共感の言葉を使います。", checked: false },
+      { id: 2, title: "内容の確認と記録", description: "お名前・連絡先・問題の内容・発生日時を確認し、クレーム管理システムに記録します。記録番号をお客様にお伝えします。", checked: false },
+      { id: 3, title: "解決策の提案", description: "自分で解決できる場合はその場で対応します。権限外の場合は「確認して30分以内にご連絡します」と伝え、上長にエスカレーションします。", checked: false },
+      { id: 4, title: "フォローアップ", description: "解決後24時間以内にフォローのご連絡をします。「その後いかがでしょうか？」と一言添えることでお客様の満足度が上がります。", checked: false }
+    ]
+  },
+  {
+    id: 6,
+    title: "安全衛生チェックリスト",
+    description: "工場・倉庫での作業前に必ず確認すべき安全チェック項目です。",
+    emoji: "⛑️",
+    createdAt: "2026-02-01",
+    updatedAt: "2026-04-01",
+    author: "渡辺 健一",
+    steps: [
+      { id: 1, title: "保護具の着用確認", description: "ヘルメット・安全靴・作業手袋・防護メガネを着用します。劣化・破損がある場合は使用せず、すぐに交換品を請求してください。", checked: false },
+      { id: 2, title: "作業エリアの目視点検", description: "床の油汚れ・水溜まり・障害物の有無を確認します。問題がある場合は作業を開始する前に除去・清掃します。", checked: false },
+      { id: 3, title: "機械・設備の始業前点検", description: "使用する機械の安全カバー・非常停止ボタンが正常に機能するかテストします。異常がある場合は使用禁止タグを付けて報告します。", checked: false },
+      { id: 4, title: "緊急時の確認", description: "消火器・AEDの場所と、緊急連絡先（内線：119）を確認します。避難経路が塞がれていないことも確認してください。", checked: false }
+    ]
+  }
+];
+
+
+// ====== ICONS ======
+const Icon = {
+  Home: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  Book: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>,
+  Plus: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  Search: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  ChevronRight: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>,
+  ChevronDown: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>,
+  Check: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>,
+  Edit: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  Trash: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>,
+  ArrowLeft: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>,
+  Users: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
+  Chart: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  Star: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  Clock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  Grip: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="5" r="1" fill="currentColor"/><circle cx="15" cy="5" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="19" r="1" fill="currentColor"/><circle cx="15" cy="19" r="1" fill="currentColor"/></svg>,
+  X: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  Folder: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>,
+};
+
+// ============================
+// APP
+// ============================
+function App() {
+  const [manuals, setManuals] = useState(() => {
+    try { const s = localStorage.getItem('manuals'); return s ? JSON.parse(s) : INITIAL_MANUALS; } catch { return INITIAL_MANUALS; }
+  });
+  const [page, setPage] = useState('home'); // home | list | view | edit | new
+  const [selectedManual, setSelectedManual] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const navigate = (p) => { setPage(p); setSidebarOpen(false); };
+
+  useEffect(() => { localStorage.setItem('manuals', JSON.stringify(manuals)); }, [manuals]);
+
+  const openManual = (manual) => { setSelectedManual(manual); setPage('view'); };
+  const editManual = (manual) => { setSelectedManual(manual); setPage('edit'); };
+  const newManual = () => { setSelectedManual(null); setPage('new'); };
+
+  const saveManual = (data) => {
+    if (data.id) {
+      setManuals(prev => prev.map(m => m.id === data.id ? data : m));
+    } else {
+      const newM = { ...data, id: Date.now(), createdAt: new Date().toISOString().slice(0,10), updatedAt: new Date().toISOString().slice(0,10) };
+      setManuals(prev => [newM, ...prev]);
+    }
+    setPage('list');
+  };
+
+  const deleteManual = (id) => {
+    setManuals(prev => prev.filter(m => m.id !== id));
+    setDeleteConfirm(null);
+    if (page === 'view') setPage('list');
+  };
+
+  const filtered = manuals.filter(m => {
+    const q = searchQuery.toLowerCase();
+    return !q || m.title.toLowerCase().includes(q) || m.description.toLowerCase().includes(q);
+  });
+
+  return (
+    <div className="app">
+      {/* SIDEBAR */}
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-logo">
+          <h1>TeachMe レザクラ</h1>
+          <span>レザクラマニュアル管理</span>
+        </div>
+        <nav className="sidebar-nav">
+          <div className="nav-section-label">メイン</div>
+          <div className={`nav-item ${page === 'home' ? 'active' : ''}`} onClick={() => navigate('home')}><Icon.Home /> ホーム</div>
+          <div className={`nav-item ${page === 'list' || page === 'view' || page === 'edit' || page === 'new' ? 'active' : ''}`} onClick={() => navigate('list')}><Icon.Book /> マニュアル一覧</div>
+        </nav>
+      </aside>
+
+      {/* MAIN */}
+      <div className="main">
+        <div className="topbar">
+          <button className="hamburger" onClick={() => setSidebarOpen(o => !o)}>
+            <span/><span/><span/>
+          </button>
+          <div className="topbar-title">
+            {page === 'home' && 'ホーム'}
+            {(page === 'list') && 'マニュアル一覧'}
+            {page === 'view' && selectedManual?.title}
+            {page === 'edit' && 'マニュアルを編集'}
+            {page === 'new' && '新しいマニュアルを作成'}
+          </div>
+          <div className="topbar-actions">
+            {(page === 'home' || page === 'list') && (
+              <div className="search-box">
+                <Icon.Search />
+                <input placeholder="マニュアルを検索..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+              </div>
+            )}
+            {(page === 'home' || page === 'list') && (
+              <button className="btn btn-primary" onClick={newManual}><Icon.Plus /><span className="btn-label"> 新規作成</span></button>
+            )}
+            {page === 'view' && selectedManual && (
+              <>
+                <button className="btn btn-secondary btn-sm" onClick={() => editManual(selectedManual)}><Icon.Edit /> 編集</button>
+                <button className="btn btn-danger btn-sm" onClick={() => setDeleteConfirm(selectedManual)}><Icon.Trash /> 削除</button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="content">
+          {page === 'home' && <HomePage manuals={manuals} filtered={filtered} searchQuery={searchQuery} openManual={openManual} newManual={newManual} goList={() => setPage('list')} />}
+          {page === 'list' && <ListPage manuals={filtered} openManual={openManual} />}
+          {page === 'view' && selectedManual && <ViewPage manual={selectedManual} goBack={() => setPage('list')} />}
+          {(page === 'edit' || page === 'new') && <EditPage manual={selectedManual} onSave={saveManual} onCancel={() => setPage(page === 'edit' ? 'view' : 'list')} />}
+        </div>
+      </div>
+
+      {/* DELETE CONFIRM MODAL */}
+      {deleteConfirm && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>マニュアルを削除しますか？</h3>
+            <p>「{deleteConfirm.title}」を削除します。この操作は取り消せません。</p>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>キャンセル</button>
+              <button className="btn btn-danger" onClick={() => deleteManual(deleteConfirm.id)}>削除する</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================
+// HOME PAGE
+// ============================
+function HomePage({ manuals, filtered, searchQuery, openManual, newManual, goList }) {
+  const recent = manuals.slice().sort((a,b) => b.updatedAt > a.updatedAt ? 1 : -1).slice(0, 4);
+  const searchResults = filtered.slice(0, 6);
+
+  return (
+    <div>
+      {searchQuery ? (
+        <>
+          <div style={{marginBottom:16,fontSize:14,color:'#6b7280'}}>「{searchQuery}」の検索結果: {filtered.length}件</div>
+          {filtered.length === 0 ? (
+            <div className="empty-state"><Icon.Search /><h3>見つかりませんでした</h3><p>別のキーワードで検索してみてください</p></div>
+          ) : (
+            <div className="manuals-grid">{searchResults.map(m => <ManualCard key={m.id} manual={m} onClick={() => openManual(m)} />)}</div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Stats */}
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon" style={{background:'#eff6ff'}}><span style={{fontSize:20}}>📋</span></div>
+              <div className="label">マニュアル総数</div>
+              <div className="value">{manuals.length}</div>
+              <div className="sub">+2 今月追加</div>
+            </div>
+          </div>
+
+          {/* Recent */}
+          <div className="section-header">
+            <div className="section-title">最近更新されたマニュアル</div>
+            <button className="btn btn-secondary btn-sm" onClick={goList}>すべて見る</button>
+          </div>
+          <div className="manuals-grid" style={{marginBottom:32}}>
+            {recent.map(m => <ManualCard key={m.id} manual={m} onClick={() => openManual(m)} />)}
+          </div>
+
+          {/* Quick Create */}
+          <div style={{background:'linear-gradient(135deg,#4f9cf9,#7c3aed)',borderRadius:16,padding:'28px 32px',color:'#fff',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div>
+              <div style={{fontSize:20,fontWeight:800,marginBottom:6}}>新しいマニュアルを作成しましょう</div>
+              <div style={{fontSize:14,opacity:0.85}}>業務手順をステップで整理して、いつでも参照できます</div>
+            </div>
+            <button className="btn" style={{background:'rgba(255,255,255,0.2)',color:'#fff',backdropFilter:'blur(4px)',flexShrink:0}} onClick={newManual}><Icon.Plus /> 作成する</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ============================
+// LIST PAGE
+// ============================
+function ListPage({ manuals, openManual }) {
+  return (
+    <div>
+      {manuals.length === 0 ? (
+        <div className="empty-state">
+          <div style={{fontSize:48,marginBottom:16}}>📭</div>
+          <h3>マニュアルがありません</h3>
+          <p>まだマニュアルがありません</p>
+        </div>
+      ) : (
+        <div className="manuals-grid">
+          {manuals.map(m => <ManualCard key={m.id} manual={m} onClick={() => openManual(m)} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================
+// MANUAL CARD
+// ============================
+function ManualCard({ manual, onClick }) {
+  return (
+    <div className="manual-card" onClick={onClick}>
+
+      <div className="card-body">
+        <div className="card-title">{manual.title}</div>
+        <div className="card-desc">{manual.description}</div>
+        <div className="card-meta">
+          <span className="card-steps">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            {manual.steps.length} ステップ
+          </span>
+          <span className="card-date">{manual.updatedAt}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================
+// VIEW PAGE
+// ============================
+function ViewPage({ manual, goBack }) {
+  const [expandedStep, setExpandedStep] = useState(0);
+
+  return (
+    <div className="viewer-container">
+      <div className="breadcrumb">
+        <a onClick={goBack}>マニュアル一覧</a>
+        <Icon.ChevronRight />
+        <span>{manual.title}</span>
+      </div>
+
+      {/* Header */}
+      <div className="viewer-header">
+
+        <div className="viewer-title">{manual.title}</div>
+        <div className="viewer-desc">{manual.description}</div>
+        <div className="viewer-meta">
+          <span className="viewer-meta-item"><Icon.Clock /> 更新日: {manual.updatedAt}</span>
+          <span className="viewer-meta-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            {manual.steps.length} ステップ
+          </span>
+        </div>
+      </div>
+
+      {/* Steps */}
+      <div className="steps-list">
+        {manual.steps.map((step, idx) => {
+          const isExpanded = expandedStep === idx;
+          return (
+            <div key={step.id} className="step-item">
+              <div className="step-header" onClick={() => setExpandedStep(isExpanded ? -1 : idx)}>
+                <div className="step-number">{idx + 1}</div>
+                <div className="step-info">
+                  <div className="step-title">{step.title}</div>
+                  {!isExpanded && <div className="step-preview">{step.description.slice(0,50)}…</div>}
+                </div>
+                <div style={{color:'#d1d5db',transform:isExpanded?'rotate(90deg)':'none',transition:'transform 0.2s'}}>
+                  <Icon.ChevronRight />
+                </div>
+              </div>
+              {isExpanded && (
+                <div className="step-body">
+                  <div className="step-desc">{step.description}</div>
+                  {step.image && <img className="step-image" src={step.image} alt="ステップ画像" />}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================
+// EDIT / NEW PAGE
+// ============================
+function EditPage({ manual, onSave, onCancel }) {
+  const isNew = !manual;
+  const [form, setForm] = useState({
+    id: manual?.id || null,
+    title: manual?.title || '',
+    description: manual?.description || '',
+    steps: manual?.steps || [{ id: Date.now(), title: '', description: '', checked: false }],
+  });
+
+  const setField = (k, v) => setForm(f => ({...f, [k]: v}));
+
+  const addStep = () => setForm(f => ({...f, steps: [...f.steps, {id: Date.now(), title:'', description:'', image:null}]}));
+  const removeStep = (id) => setForm(f => ({...f, steps: f.steps.filter(s => s.id !== id)}));
+  const setStep = (id, k, v) => setForm(f => ({...f, steps: f.steps.map(s => s.id === id ? {...s, [k]: v} : s)}));
+
+  return (
+    <div className="editor-container">
+      <div className="breadcrumb">
+        <a onClick={onCancel}>{isNew ? 'マニュアル一覧' : manual.title}</a>
+        <Icon.ChevronRight />
+        <span>{isNew ? '新規作成' : '編集'}</span>
+      </div>
+
+      {/* Basic Info */}
+      <div className="editor-card">
+        <h3>基本情報</h3>
+
+
+        <div className="form-group">
+          <label className="form-label">タイトル <span style={{color:'#ef4444'}}>*</span></label>
+          <input className="form-input" placeholder="例：新入社員オンボーディング" value={form.title} onChange={e => setField('title', e.target.value)} />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">説明</label>
+          <textarea className="form-textarea" placeholder="このマニュアルの概要を入力してください" value={form.description} onChange={e => setField('description', e.target.value)} />
+        </div>
+
+      </div>
+
+      {/* Steps */}
+      <div className="editor-card">
+        <h3>作業ステップ</h3>
+
+        {form.steps.map((step, idx) => (
+          <div key={step.id} className="step-editor">
+            <div className="step-editor-header">
+              <span className="step-editor-num">STEP {idx + 1}</span>
+              {form.steps.length > 1 && (
+                <button className="btn-icon" onClick={() => removeStep(step.id)} style={{color:'#ef4444'}}><Icon.Trash /></button>
+              )}
+            </div>
+            <div className="form-group">
+              <label className="form-label">タイトル</label>
+              <input className="form-input" placeholder={`ステップ${idx+1}のタイトル`} value={step.title} onChange={e => setStep(step.id,'title',e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">説明</label>
+              <textarea className="form-textarea" placeholder="このステップで行う作業を詳しく説明してください" value={step.description} onChange={e => setStep(step.id,'description',e.target.value)} />
+            </div>
+            <div className="form-group" style={{marginBottom:0}}>
+              <label className="form-label">画像</label>
+              {step.image ? (
+                <div className="img-preview-wrap">
+                  <img src={step.image} alt="ステップ画像" />
+                  <button className="img-remove-btn" onClick={() => setStep(step.id,'image',null)}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    削除
+                  </button>
+                </div>
+              ) : (
+                <label className="img-upload-area">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  クリックして画像をアップロード
+                  <input type="file" accept="image/*" style={{display:'none'}} onChange={e => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = ev => setStep(step.id, 'image', ev.target.result);
+                    reader.readAsDataURL(file);
+                    e.target.value = '';
+                  }} />
+                </label>
+              )}
+            </div>
+          </div>
+        ))}
+
+        <button className="add-step-btn" onClick={addStep}><Icon.Plus /> ステップを追加</button>
+      </div>
+
+      {/* Actions */}
+      <div style={{display:'flex',gap:12,justifyContent:'flex-end',paddingBottom:32}}>
+        <button className="btn btn-secondary" onClick={onCancel}>キャンセル</button>
+        <button className="btn btn-primary" onClick={() => {
+          if (!form.title.trim()) { alert('タイトルを入力してください'); return; }
+          if (form.steps.some(s => !s.title.trim())) { alert('すべてのステップにタイトルを入力してください'); return; }
+          onSave({...form, updatedAt: new Date().toISOString().slice(0,10)});
+        }}><Icon.Check /> {isNew ? 'マニュアルを作成' : '変更を保存'}</button>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
