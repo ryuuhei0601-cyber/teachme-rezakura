@@ -53,13 +53,6 @@
     .btn-icon { padding: 8px; border-radius: 8px; background: transparent; border: none; cursor: pointer; color: #6b7280; transition: all 0.15s; display: flex; align-items: center; }
     .btn-icon:hover { background: #f0f2f5; color: #1a1a2e; }
 
-    /* ====== STATS CARDS ====== */
-    .stats-grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: 16px; margin-bottom: 28px; max-width: 240px; }
-    .stat-card { background: #fff; border-radius: 12px; padding: 20px; border: 1px solid #e8ecf0; }
-    .stat-card .label { font-size: 12px; color: #9ca3af; font-weight: 500; margin-bottom: 6px; }
-    .stat-card .value { font-size: 28px; font-weight: 700; color: #1a1a2e; }
-    .stat-card .sub { font-size: 12px; color: #10b981; margin-top: 4px; }
-    .stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
 
     /* ====== MANUAL CARDS ====== */
     .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
@@ -73,7 +66,6 @@
     .card-desc { font-size: 12px; color: #6b7280; line-height: 1.5; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .card-meta { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid #f0f2f5; }
     .card-steps { font-size: 12px; color: #9ca3af; display: flex; align-items: center; gap: 4px; }
-    .card-date { font-size: 11px; color: #c4c9d4; }
 
     /* ====== MANUAL VIEWER ====== */
     .viewer-container { max-width: 800px; margin: 0 auto; }
@@ -91,14 +83,6 @@
     .step-preview { font-size: 12px; color: #9ca3af; margin-top: 2px; }
     .step-body { padding: 0 20px 20px 70px; }
     .step-desc { font-size: 14px; color: #374151; line-height: 1.7; }
-    .step-image { width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; margin-top: 12px; background: #f9fafb; }
-    .img-upload-area { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 24px; border: 2px dashed #d1d5db; border-radius: 8px; cursor: pointer; transition: all 0.15s; color: #9ca3af; font-size: 13px; margin-top: 8px; }
-    .img-upload-area:hover { border-color: #4f9cf9; color: #4f9cf9; background: #f0f7ff; }
-    .img-upload-area svg { width: 28px; height: 28px; }
-    .img-preview-wrap { position: relative; margin-top: 8px; display: inline-block; width: 100%; }
-    .img-preview-wrap img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; display: block; }
-    .img-remove-btn { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.55); color: #fff; border: none; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-    .img-remove-btn:hover { background: rgba(220,38,38,0.85); }
 
     /* ====== EDITOR ====== */
     .editor-container { max-width: 760px; margin: 0 auto; }
@@ -166,7 +150,6 @@
       .btn span.btn-label { display: none; }
       .content { padding: 16px; }
       .manuals-grid { grid-template-columns: 1fr; }
-      .stats-grid { max-width: 100%; }
       .step-body { padding: 0 16px 20px 16px; }
       .viewer-header { padding: 20px; }
       .viewer-title { font-size: 20px; }
@@ -182,6 +165,27 @@
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
+// ============================
+// ERROR BOUNDARY
+// ============================
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{padding:40,textAlign:'center',fontFamily:'sans-serif'}}>
+          <div style={{fontSize:48,marginBottom:16}}>⚠️</div>
+          <h2 style={{marginBottom:8}}>エラーが発生しました</h2>
+          <p style={{color:'#6b7280',marginBottom:24}}>{String(this.state.error)}</p>
+          <button onClick={() => { this.setState({error:null}); }} style={{padding:'10px 24px',background:'#4f9cf9',color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontSize:14}}>再読み込み</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ==============================
 // INITIAL DATA
 // ==============================
@@ -191,8 +195,6 @@ const INITIAL_MANUALS = [
     title: "新入社員オンボーディング",
     description: "新しく入社した社員が最初の1週間でやるべきことをまとめたマニュアルです。",
     emoji: "🏢",
-    createdAt: "2026-04-01",
-    updatedAt: "2026-04-10",
     author: "山田 太郎",
     steps: [
       { id: 1, title: "入社書類の提出", description: "雇用契約書、マイナンバー、口座情報など必要書類を人事部に提出してください。提出先：2F 人事部 鈴木さん", checked: false },
@@ -207,8 +209,6 @@ const INITIAL_MANUALS = [
     title: "レジ操作マニュアル",
     description: "POSレジの基本操作から返品処理までの手順を解説します。",
     emoji: "🛒",
-    createdAt: "2026-03-15",
-    updatedAt: "2026-04-05",
     author: "田中 花子",
     steps: [
       { id: 1, title: "レジの起動とログイン", description: "電源ボタンを押してPOSシステムを起動します。担当者IDとパスワードを入力してログインします。担当者IDは名札の裏面に記載されています。", checked: false },
@@ -224,8 +224,6 @@ const INITIAL_MANUALS = [
     title: "月次レポートの作成手順",
     description: "毎月末に提出が必要な月次業績レポートの作成から提出までの流れです。",
     emoji: "📊",
-    createdAt: "2026-02-20",
-    updatedAt: "2026-04-08",
     author: "佐藤 次郎",
     steps: [
       { id: 1, title: "データの収集", description: "SalesforceとGA4からそれぞれ当月の売上データとアクセスデータをエクスポートします。ファイル形式はCSVで保存してください。", checked: false },
@@ -240,8 +238,6 @@ const INITIAL_MANUALS = [
     title: "Slack利用ガイド",
     description: "社内コミュニケーションツール Slackの基本的な使い方と社内ルールをまとめました。",
     emoji: "💬",
-    createdAt: "2026-01-10",
-    updatedAt: "2026-03-28",
     author: "鈴木 美咲",
     steps: [
       { id: 1, title: "アカウント作成とプロフィール設定", description: "招待メールのリンクからSlackにサインアップします。プロフィール写真・氏名・役職・内線番号を必ず設定してください。", checked: false },
@@ -255,8 +251,6 @@ const INITIAL_MANUALS = [
     title: "クレーム対応マニュアル",
     description: "お客様からのクレームを適切に受け付け、迅速に解決するための対応フロー。",
     emoji: "🤝",
-    createdAt: "2026-03-01",
-    updatedAt: "2026-04-09",
     author: "高橋 真由",
     steps: [
       { id: 1, title: "お客様のお話を丁寧に聞く", description: "まず謝罪し、お客様の話を最後まで遮らず聞きます。「おっしゃる通りです」「ご不便をおかけして大変申し訳ございません」など共感の言葉を使います。", checked: false },
@@ -270,8 +264,6 @@ const INITIAL_MANUALS = [
     title: "安全衛生チェックリスト",
     description: "工場・倉庫での作業前に必ず確認すべき安全チェック項目です。",
     emoji: "⛑️",
-    createdAt: "2026-02-01",
-    updatedAt: "2026-04-01",
     author: "渡辺 健一",
     steps: [
       { id: 1, title: "保護具の着用確認", description: "ヘルメット・安全靴・作業手袋・防護メガネを着用します。劣化・破損がある場合は使用せず、すぐに交換品を請求してください。", checked: false },
@@ -309,7 +301,12 @@ const Icon = {
 // ============================
 function App() {
   const [manuals, setManuals] = useState(() => {
-    try { const s = localStorage.getItem('manuals'); return s ? JSON.parse(s) : INITIAL_MANUALS; } catch { return INITIAL_MANUALS; }
+    try {
+      const s = localStorage.getItem('manuals');
+      if (!s) return INITIAL_MANUALS;
+      const data = JSON.parse(s);
+      return data;
+    } catch { return INITIAL_MANUALS; }
   });
   const [page, setPage] = useState('home'); // home | list | view | edit | new
   const [selectedManual, setSelectedManual] = useState(null);
@@ -319,7 +316,13 @@ function App() {
 
   const navigate = (p) => { setPage(p); setSidebarOpen(false); };
 
-  useEffect(() => { localStorage.setItem('manuals', JSON.stringify(manuals)); }, [manuals]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('manuals', JSON.stringify(manuals));
+    } catch (e) {
+      alert('保存容量が不足しています。不要なマニュアルを削除してください。');
+    }
+  }, [manuals]);
 
   const openManual = (manual) => { setSelectedManual(manual); setPage('view'); };
   const editManual = (manual) => { setSelectedManual(manual); setPage('edit'); };
@@ -329,7 +332,7 @@ function App() {
     if (data.id) {
       setManuals(prev => prev.map(m => m.id === data.id ? data : m));
     } else {
-      const newM = { ...data, id: Date.now(), createdAt: new Date().toISOString().slice(0,10), updatedAt: new Date().toISOString().slice(0,10) };
+      const newM = { ...data, id: Date.now() };
       setManuals(prev => [newM, ...prev]);
     }
     setPage('list');
@@ -338,7 +341,7 @@ function App() {
   const deleteManual = (id) => {
     setManuals(prev => prev.filter(m => m.id !== id));
     setDeleteConfirm(null);
-    if (page === 'view') setPage('list');
+    if (page === 'view' || page === 'edit') setPage('list');
   };
 
   const filtered = manuals.filter(m => {
@@ -370,7 +373,7 @@ function App() {
           </button>
           <div className="topbar-title">
             {page === 'home' && 'ホーム'}
-            {(page === 'list') && 'マニュアル一覧'}
+            {page === 'list' && 'マニュアル一覧'}
             {page === 'view' && selectedManual?.title}
             {page === 'edit' && 'マニュアルを編集'}
             {page === 'new' && '新しいマニュアルを作成'}
@@ -423,8 +426,7 @@ function App() {
 // HOME PAGE
 // ============================
 function HomePage({ manuals, filtered, searchQuery, openManual, newManual, goList }) {
-  const recent = manuals.slice().sort((a,b) => b.updatedAt > a.updatedAt ? 1 : -1).slice(0, 4);
-  const searchResults = filtered.slice(0, 6);
+const searchResults = filtered.slice(0, 6);
 
   return (
     <div>
@@ -439,23 +441,12 @@ function HomePage({ manuals, filtered, searchQuery, openManual, newManual, goLis
         </>
       ) : (
         <>
-          {/* Stats */}
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon" style={{background:'#eff6ff'}}><span style={{fontSize:20}}>📋</span></div>
-              <div className="label">マニュアル総数</div>
-              <div className="value">{manuals.length}</div>
-              <div className="sub">+2 今月追加</div>
-            </div>
-          </div>
-
-          {/* Recent */}
+          {/* List */}
           <div className="section-header">
-            <div className="section-title">最近更新されたマニュアル</div>
-            <button className="btn btn-secondary btn-sm" onClick={goList}>すべて見る</button>
+            <div className="section-title">マニュアル一覧</div>
           </div>
           <div className="manuals-grid" style={{marginBottom:32}}>
-            {recent.map(m => <ManualCard key={m.id} manual={m} onClick={() => openManual(m)} />)}
+            {manuals.map(m => <ManualCard key={m.id} manual={m} onClick={() => openManual(m)} />)}
           </div>
 
           {/* Quick Create */}
@@ -508,66 +499,46 @@ function ManualCard({ manual, onClick }) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
             {manual.steps.length} ステップ
           </span>
-          <span className="card-date">{manual.updatedAt}</span>
         </div>
       </div>
     </div>
   );
 }
 
+
 // ============================
 // VIEW PAGE
 // ============================
 function ViewPage({ manual, goBack }) {
-  const [expandedStep, setExpandedStep] = useState(0);
-
   return (
     <div className="viewer-container">
       <div className="breadcrumb">
         <a onClick={goBack}>マニュアル一覧</a>
-        <Icon.ChevronRight />
+        <span>/</span>
         <span>{manual.title}</span>
       </div>
-
-      {/* Header */}
       <div className="viewer-header">
-
         <div className="viewer-title">{manual.title}</div>
         <div className="viewer-desc">{manual.description}</div>
         <div className="viewer-meta">
-          <span className="viewer-meta-item"><Icon.Clock /> 更新日: {manual.updatedAt}</span>
           <span className="viewer-meta-item">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
             {manual.steps.length} ステップ
           </span>
         </div>
       </div>
-
-      {/* Steps */}
       <div className="steps-list">
-        {manual.steps.map((step, idx) => {
-          const isExpanded = expandedStep === idx;
-          return (
-            <div key={step.id} className="step-item">
-              <div className="step-header" onClick={() => setExpandedStep(isExpanded ? -1 : idx)}>
-                <div className="step-number">{idx + 1}</div>
-                <div className="step-info">
-                  <div className="step-title">{step.title}</div>
-                  {!isExpanded && <div className="step-preview">{step.description.slice(0,50)}…</div>}
-                </div>
-                <div style={{color:'#d1d5db',transform:isExpanded?'rotate(90deg)':'none',transition:'transform 0.2s'}}>
-                  <Icon.ChevronRight />
-                </div>
-              </div>
-              {isExpanded && (
-                <div className="step-body">
-                  <div className="step-desc">{step.description}</div>
-                  {step.image && <img className="step-image" src={step.image} alt="ステップ画像" />}
-                </div>
-              )}
+        {manual.steps.map((step, idx) => (
+          <div key={step.id} className="step-item">
+            <div className="step-header">
+              <div className="step-number">{idx + 1}</div>
+              <div className="step-title">{step.title}</div>
             </div>
-          );
-        })}
+            <div className="step-body">
+              <div className="step-desc">{step.description}</div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -587,7 +558,7 @@ function EditPage({ manual, onSave, onCancel }) {
 
   const setField = (k, v) => setForm(f => ({...f, [k]: v}));
 
-  const addStep = () => setForm(f => ({...f, steps: [...f.steps, {id: Date.now(), title:'', description:'', image:null}]}));
+  const addStep = () => setForm(f => ({...f, steps: [...f.steps, {id: Date.now(), title:'', description:''}]}));
   const removeStep = (id) => setForm(f => ({...f, steps: f.steps.filter(s => s.id !== id)}));
   const setStep = (id, k, v) => setForm(f => ({...f, steps: f.steps.map(s => s.id === id ? {...s, [k]: v} : s)}));
 
@@ -636,31 +607,6 @@ function EditPage({ manual, onSave, onCancel }) {
               <label className="form-label">説明</label>
               <textarea className="form-textarea" placeholder="このステップで行う作業を詳しく説明してください" value={step.description} onChange={e => setStep(step.id,'description',e.target.value)} />
             </div>
-            <div className="form-group" style={{marginBottom:0}}>
-              <label className="form-label">画像</label>
-              {step.image ? (
-                <div className="img-preview-wrap">
-                  <img src={step.image} alt="ステップ画像" />
-                  <button className="img-remove-btn" onClick={() => setStep(step.id,'image',null)}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    削除
-                  </button>
-                </div>
-              ) : (
-                <label className="img-upload-area">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                  クリックして画像をアップロード
-                  <input type="file" accept="image/*" style={{display:'none'}} onChange={e => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = ev => setStep(step.id, 'image', ev.target.result);
-                    reader.readAsDataURL(file);
-                    e.target.value = '';
-                  }} />
-                </label>
-              )}
-            </div>
           </div>
         ))}
 
@@ -673,14 +619,16 @@ function EditPage({ manual, onSave, onCancel }) {
         <button className="btn btn-primary" onClick={() => {
           if (!form.title.trim()) { alert('タイトルを入力してください'); return; }
           if (form.steps.some(s => !s.title.trim())) { alert('すべてのステップにタイトルを入力してください'); return; }
-          onSave({...form, updatedAt: new Date().toISOString().slice(0,10)});
+          onSave({...form});
         }}><Icon.Check /> {isNew ? 'マニュアルを作成' : '変更を保存'}</button>
       </div>
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <ErrorBoundary><App /></ErrorBoundary>
+);
 </script>
 </body>
 </html>
