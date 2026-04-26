@@ -37,10 +37,12 @@
     /* ====== TOPBAR ====== */
     .topbar-title { font-size: 18px; font-weight: 600; color: #1a1a2e; }
     .topbar-actions { display: flex; align-items: center; gap: 12px; }
-    .search-box { display: flex; align-items: center; gap: 8px; background: #f0f2f5; border-radius: 8px; padding: 8px 14px; border: 1.5px solid transparent; transition: border-color 0.15s; }
-    .search-box:focus-within { border-color: #4f9cf9; background: #fff; }
-    .search-box input { border: none; background: none; outline: none; font-size: 14px; color: #1a1a2e; width: 220px; }
-    .search-box svg { width: 16px; height: 16px; color: #9ca3af; }
+    .sync-badge { display: flex; align-items: center; gap: 5px; font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+    .sync-badge.syncing { background: #e0f0ff; color: #2563eb; }
+    .sync-badge.ok     { background: #d1fae5; color: #059669; }
+    .sync-badge.error  { background: #fee2e2; color: #dc2626; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .sync-spin { animation: spin 1s linear infinite; display: inline-block; }
 
     /* ====== BUTTONS ====== */
     .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
@@ -147,8 +149,7 @@
       .topbar { padding: 0 12px; gap: 8px; }
       .topbar-title { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
       .topbar-actions { gap: 6px; }
-      .search-box input { width: 100px; }
-      .btn span.btn-label { display: none; }
+      .btn-label { display: none; }
       .content { padding: 16px; }
       .manuals-grid { grid-template-columns: 1fr; }
       .step-body { padding: 0 16px 20px 16px; }
@@ -157,6 +158,7 @@
       .viewer-meta { flex-wrap: wrap; gap: 10px; }
       .editor-card { padding: 20px; }
       .modal { padding: 20px; }
+      .sync-badge { font-size: 11px; padding: 3px 7px; }
     }
   </style>
 </head>
@@ -186,6 +188,11 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
+// ==============================
+// 【設定】Apps Script の URL をここに貼り付けてください
+// ==============================
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwUO5sAl9tQMM6A3aDyEdE3Yl32q-Ut_03Uv810rGRKQ0X8Ee3HqgDNtFdVlqXXIDmkjw/exec'; // ← ここにURLを貼り付ける
 
 // ==============================
 // INITIAL DATA
@@ -305,24 +312,50 @@ function App() {
     try {
       const s = localStorage.getItem('manuals');
       if (!s) return INITIAL_MANUALS;
-      const data = JSON.parse(s);
-      return data;
+      return JSON.parse(s);
     } catch { return INITIAL_MANUALS; }
   });
-  const [page, setPage] = useState('home'); // home | list | view | edit | new
+  const [page, setPage] = useState('home');
   const [selectedManual, setSelectedManual] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle | syncing | ok | error
 
   const navigate = (p) => { setPage(p); setSidebarOpen(false); };
 
+  // GASへ保存する共通関数
+  const pushToGAS = (data) => {
+    if (!GAS_URL) return;
+    setSyncStatus('syncing');
+    fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(data),
+      redirect: 'follow',
+    })
+    .then(() => setSyncStatus('ok'))
+    .catch(() => setSyncStatus('error'));
+  };
+
+  // 起動時にGASからデータを取得
   useEffect(() => {
-    try {
-      localStorage.setItem('manuals', JSON.stringify(manuals));
-    } catch (e) {
-      alert('保存容量が不足しています。不要なマニュアルを削除してください。');
-    }
+    if (!GAS_URL) return;
+    setSyncStatus('syncing');
+    fetch(GAS_URL, { redirect: 'follow' })
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setManuals(data);
+          try { localStorage.setItem('manuals', JSON.stringify(data)); } catch {}
+        }
+        setSyncStatus('ok');
+      })
+      .catch(() => setSyncStatus('error'));
+  }, []);
+
+  // localStorageへの保存
+  useEffect(() => {
+    try { localStorage.setItem('manuals', JSON.stringify(manuals)); } catch {}
   }, [manuals]);
 
   const openManual = (manual) => { setSelectedManual(manual); setPage('view'); };
@@ -330,25 +363,25 @@ function App() {
   const newManual = () => { setSelectedManual(null); setPage('new'); };
 
   const saveManual = (data) => {
+    let next;
     if (data.id) {
-      setManuals(prev => prev.map(m => m.id === data.id ? data : m));
+      next = manuals.map(m => m.id === data.id ? data : m);
     } else {
-      const newM = { ...data, id: Date.now() };
-      setManuals(prev => [newM, ...prev]);
+      next = [{ ...data, id: Date.now() }, ...manuals];
     }
+    setManuals(next);
+    pushToGAS(next);
     setPage('list');
   };
 
   const deleteManual = (id) => {
-    setManuals(prev => prev.filter(m => m.id !== id));
+    const next = manuals.filter(m => m.id !== id);
+    setManuals(next);
+    pushToGAS(next);
     setDeleteConfirm(null);
     if (page === 'view' || page === 'edit') setPage('list');
   };
 
-  const filtered = manuals.filter(m => {
-    const q = searchQuery.toLowerCase();
-    return !q || m.title.toLowerCase().includes(q) || m.description.toLowerCase().includes(q);
-  });
 
   return (
     <div className="app">
@@ -362,7 +395,6 @@ function App() {
         <nav className="sidebar-nav">
           <div className="nav-section-label">メイン</div>
           <div className={`nav-item ${page === 'home' ? 'active' : ''}`} onClick={() => navigate('home')}><Icon.Home /> ホーム</div>
-          <div className={`nav-item ${page === 'list' || page === 'view' || page === 'edit' || page === 'new' ? 'active' : ''}`} onClick={() => navigate('list')}><Icon.Book /> マニュアル一覧</div>
         </nav>
       </aside>
 
@@ -380,12 +412,9 @@ function App() {
             {page === 'new' && '新しいマニュアルを作成'}
           </div>
           <div className="topbar-actions">
-            {(page === 'home' || page === 'list') && (
-              <div className="search-box">
-                <Icon.Search />
-                <input placeholder="マニュアルを検索..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-              </div>
-            )}
+            {GAS_URL && syncStatus === 'syncing' && <span className="sync-badge syncing"><span className="sync-spin">↻</span> 同期中</span>}
+            {GAS_URL && syncStatus === 'ok'      && <span className="sync-badge ok">✓ 同期済み</span>}
+            {GAS_URL && syncStatus === 'error'   && <span className="sync-badge error">✗ 同期エラー</span>}
             {(page === 'home' || page === 'list') && (
               <button className="btn btn-primary" onClick={newManual}><Icon.Plus /><span className="btn-label"> 新規作成</span></button>
             )}
@@ -398,9 +427,10 @@ function App() {
           </div>
         </div>
 
+
         <div className="content">
-          {page === 'home' && <HomePage manuals={manuals} filtered={filtered} searchQuery={searchQuery} openManual={openManual} newManual={newManual} goList={() => setPage('list')} />}
-          {page === 'list' && <ListPage manuals={filtered} openManual={openManual} />}
+          {page === 'home' && <HomePage manuals={manuals} openManual={openManual} newManual={newManual} />}
+          {page === 'list' && <ListPage manuals={manuals} openManual={openManual} />}
           {page === 'view' && selectedManual && <ViewPage manual={selectedManual} goBack={() => setPage('list')} />}
           {(page === 'edit' || page === 'new') && <EditPage manual={selectedManual} onSave={saveManual} onCancel={() => setPage(page === 'edit' ? 'view' : 'list')} />}
         </div>
@@ -426,40 +456,22 @@ function App() {
 // ============================
 // HOME PAGE
 // ============================
-function HomePage({ manuals, filtered, searchQuery, openManual, newManual, goList }) {
-const searchResults = filtered.slice(0, 6);
-
+function HomePage({ manuals, openManual, newManual }) {
   return (
     <div>
-      {searchQuery ? (
-        <>
-          <div style={{marginBottom:16,fontSize:14,color:'#6b7280'}}>「{searchQuery}」の検索結果: {filtered.length}件</div>
-          {filtered.length === 0 ? (
-            <div className="empty-state"><Icon.Search /><h3>見つかりませんでした</h3><p>別のキーワードで検索してみてください</p></div>
-          ) : (
-            <div className="manuals-grid">{searchResults.map(m => <ManualCard key={m.id} manual={m} onClick={() => openManual(m)} />)}</div>
-          )}
-        </>
-      ) : (
-        <>
-          {/* List */}
-          <div className="section-header">
-            <div className="section-title">マニュアル一覧</div>
-          </div>
-          <div className="manuals-grid" style={{marginBottom:32}}>
-            {manuals.map(m => <ManualCard key={m.id} manual={m} onClick={() => openManual(m)} />)}
-          </div>
-
-          {/* Quick Create */}
-          <div style={{background:'linear-gradient(135deg,#4f9cf9,#7c3aed)',borderRadius:16,padding:'28px 32px',color:'#fff',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-            <div>
-              <div style={{fontSize:20,fontWeight:800,marginBottom:6}}>新しいマニュアルを作成しましょう</div>
-              <div style={{fontSize:14,opacity:0.85}}>業務手順をステップで整理して、いつでも参照できます</div>
-            </div>
-            <button className="btn" style={{background:'rgba(255,255,255,0.2)',color:'#fff',backdropFilter:'blur(4px)',flexShrink:0}} onClick={newManual}><Icon.Plus /> 作成する</button>
-          </div>
-        </>
-      )}
+      <div className="section-header">
+        <div className="section-title">マニュアル一覧</div>
+      </div>
+      <div className="manuals-grid" style={{marginBottom:32}}>
+        {manuals.map(m => <ManualCard key={m.id} manual={m} onClick={() => openManual(m)} />)}
+      </div>
+      <div style={{background:'linear-gradient(135deg,#4f9cf9,#7c3aed)',borderRadius:16,padding:'28px 32px',color:'#fff',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div>
+          <div style={{fontSize:20,fontWeight:800,marginBottom:6}}>新しいマニュアルを作成しましょう</div>
+          <div style={{fontSize:14,opacity:0.85}}>業務手順をステップで整理して、いつでも参照できます</div>
+        </div>
+        <button className="btn" style={{background:'rgba(255,255,255,0.2)',color:'#fff',backdropFilter:'blur(4px)',flexShrink:0}} onClick={newManual}><Icon.Plus /> 作成する</button>
+      </div>
     </div>
   );
 }
