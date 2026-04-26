@@ -101,6 +101,13 @@
     .step-editor-num { font-size: 13px; font-weight: 700; color: #4f9cf9; background: #eff6ff; padding: 4px 10px; border-radius: 6px; }
     .add-step-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; border: 2px dashed #d1d5db; border-radius: 10px; background: none; cursor: pointer; font-size: 14px; color: #6b7280; font-weight: 600; transition: all 0.15s; }
     .add-step-btn:hover { border-color: #4f9cf9; color: #4f9cf9; background: #f0f7ff; }
+    .upload-label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: #4f9cf9; background: #eff6ff; border: 1.5px dashed #93c5fd; border-radius: 8px; padding: 8px 14px; margin-top: 6px; transition: background 0.15s; }
+    .upload-label:hover { background: #dbeafe; }
+    .upload-label.uploading { color: #9ca3af; border-color: #d1d5db; background: #f9fafb; cursor: not-allowed; pointer-events: none; }
+    .step-img-preview { position: relative; margin-top: 8px; }
+    .step-img-preview img { width: 100%; border-radius: 8px; display: block; max-height: 260px; object-fit: cover; }
+    .step-img-remove { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.55); color: #fff; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+    .step-img-view { width: 100%; border-radius: 10px; display: block; margin-top: 10px; max-height: 320px; object-fit: cover; }
 
 
     /* ====== EMPTY STATE ====== */
@@ -556,6 +563,7 @@ function ViewPage({ manual, goBack }) {
             </div>
             <div className="step-body">
               <div className="step-desc">{step.description}</div>
+              {step.image && <img src={step.image} alt={step.title} className="step-img-view" />}
             </div>
           </div>
         ))}
@@ -581,6 +589,49 @@ function EditPage({ manual, onSave, onCancel }) {
   const addStep = () => setForm(f => ({...f, steps: [...f.steps, {id: Date.now(), title:'', description:''}]}));
   const removeStep = (id) => setForm(f => ({...f, steps: f.steps.filter(s => s.id !== id)}));
   const setStep = (id, k, v) => setForm(f => ({...f, steps: f.steps.map(s => s.id === id ? {...s, [k]: v} : s)}));
+
+  const [uploadingStepId, setUploadingStepId] = useState(null);
+
+  const compressImage = (file) => new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 1200;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h * MAX / w); w = MAX; } else { w = Math.round(w * MAX / h); h = MAX; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.75);
+    };
+    img.src = url;
+  });
+
+  const handleImageUpload = async (e, stepId) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    setUploadingStepId(stepId);
+    try {
+      const compressed = await compressImage(file);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const base64 = ev.target.result.split(',')[1];
+        fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ type: 'upload_image', data: base64, mimeType: 'image/jpeg', fileName: file.name }),
+          redirect: 'follow',
+        })
+        .then(r => r.json())
+        .then(res => { if (res.url) setStep(stepId, 'image', res.url); })
+        .catch(() => alert('画像のアップロードに失敗しました'))
+        .finally(() => setUploadingStepId(null));
+      };
+      reader.readAsDataURL(compressed);
+    } catch { setUploadingStepId(null); }
+  };
 
   return (
     <div className="editor-container">
@@ -626,6 +677,19 @@ function EditPage({ manual, onSave, onCancel }) {
             <div className="form-group">
               <label className="form-label">説明</label>
               <textarea className="form-textarea" placeholder="このステップで行う作業を詳しく説明してください" value={step.description} onChange={e => setStep(step.id,'description',e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">写真</label>
+              {step.image && (
+                <div className="step-img-preview">
+                  <img src={step.image} alt="ステップ画像" />
+                  <button className="step-img-remove" onClick={() => setStep(step.id, 'image', '')} title="削除">✕</button>
+                </div>
+              )}
+              <label className={`upload-label${uploadingStepId === step.id ? ' uploading' : ''}`}>
+                <Icon.Upload /> {uploadingStepId === step.id ? 'アップロード中...' : (step.image ? '写真を変更' : '写真を追加')}
+                <input type="file" accept="image/*" style={{display:'none'}} onChange={e => handleImageUpload(e, step.id)} disabled={uploadingStepId !== null} />
+              </label>
             </div>
           </div>
         ))}
