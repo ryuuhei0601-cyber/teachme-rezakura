@@ -18,8 +18,6 @@
     .main { margin-left: 240px; flex: 1; }
     .topbar { background: #fff; border-bottom: 1px solid #e8ecf0; padding: 0 32px; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
     .content { padding: 32px; }
-    .topbar-logo { font-size: 16px; font-weight: 800; color: #4f9cf9; cursor: pointer; background: none; border: none; padding: 0; letter-spacing: 0.3px; flex-shrink: 0; }
-    .topbar-logo:hover { opacity: 0.8; }
 
     /* ====== SIDEBAR ====== */
     .sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
@@ -161,7 +159,11 @@
       .editor-card { padding: 20px; }
       .modal { padding: 20px; }
       .sync-badge { font-size: 11px; padding: 3px 7px; }
+      .topbar-new-btn { display: none; }
+      .fab-new { display: flex; }
     }
+    .fab-new { display: none; position: fixed; right: 20px; bottom: 24px; z-index: 60; width: 56px; height: 56px; border-radius: 50%; background: #4f9cf9; color: #fff; border: none; cursor: pointer; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(79,156,249,0.45); font-size: 28px; transition: background 0.15s, transform 0.1s; }
+    .fab-new:hover { background: #3a8ef0; transform: scale(1.07); }
   </style>
 </head>
 <body>
@@ -406,8 +408,7 @@ function App() {
           <button className="hamburger" onClick={() => setSidebarOpen(o => !o)}>
             <span/><span/><span/>
           </button>
-          <button className="topbar-logo" onClick={() => navigate('home')}>TeachMe レザクラ</button>
-          <div className="topbar-title">
+<div className="topbar-title">
             {page === 'home' && 'ホーム'}
             {page === 'list' && 'マニュアル一覧'}
             {page === 'view' && selectedManual?.title}
@@ -419,7 +420,7 @@ function App() {
             {GAS_URL && syncStatus === 'ok'      && <span className="sync-badge ok">✓ 同期済み</span>}
             {GAS_URL && syncStatus === 'error'   && <span className="sync-badge error">✗ 同期エラー</span>}
             {(page === 'home' || page === 'list') && (
-              <button className="btn btn-primary" onClick={newManual}><Icon.Plus /><span className="btn-label"> 新規作成</span></button>
+              <button className="btn btn-primary topbar-new-btn" onClick={newManual}><Icon.Plus /><span className="btn-label"> 新規作成</span></button>
             )}
             {page === 'view' && selectedManual && (
               <>
@@ -431,6 +432,9 @@ function App() {
         </div>
 
 
+        {(page === 'home' || page === 'list') && (
+          <button className="fab-new" onClick={newManual} aria-label="新規作成"><Icon.Plus /></button>
+        )}
         <div className="content">
           {page === 'home' && <HomePage manuals={manuals} openManual={openManual} newManual={newManual} />}
           {page === 'list' && <ListPage manuals={manuals} openManual={openManual} />}
